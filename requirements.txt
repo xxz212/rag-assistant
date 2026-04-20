@@ -1,4 +1,4 @@
-streamlit==1.41.0
+streamlit
 langchain==1.2.15
 langchain-community==0.4.1
 langchain-chroma==1.1.0
