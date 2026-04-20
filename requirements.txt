@@ -1,10 +1,10 @@
-streamlit
-langchain
-langchain-community
-langchain-chroma
-langchain-text-splitters
+streamlit==1.41.0
+langchain==1.2.15
+langchain-community==0.4.1
+langchain-chroma==1.1.0
+langchain-text-splitters==0.3.4
 dashscope
 pymupdf
 docx2txt
 python-dotenv
-chromadb
+chromadb==0.6.3
