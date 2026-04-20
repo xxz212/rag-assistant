@@ -7,4 +7,5 @@ dashscope
 pymupdf
 docx2txt
 python-dotenv
-chromadb==0.6.3
+chromadb==0.5.23
+protobuf==3.20.3
