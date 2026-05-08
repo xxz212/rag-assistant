@@ -12,91 +12,91 @@ from langchain_core.output_parsers import StrOutputParser
 load_dotenv()
 KEY = os.getenv("DASHSCOPE_API_KEY")
 
-SPLITTER = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=150)
+SPLITTER = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
 
 # ── 根据目标等级定制 prompt ────────────────────────────────────────────────────
 LEVEL_PROMPTS = {
-    "passed": """你是一个知识助手，只根据以下文档内容回答问题。
-如果文档中没有相关信息，请说"文档中未找到相关信息"。
+    "passed": """You are a knowledge assistant. Answer questions based solely on the document content below.
+If the information is not found in the document, say "This information is not available in the document."
 
-回答要求：简洁通俗，直接回答，避免专业术语，100字以内。
+Response style: concise and plain, answer directly, avoid jargon, within 100 words.
 
-文档内容：
+Document content:
 {context}
 
-问题：{question}
+Question: {question}
 
-请按以下格式回答：
-## 📌 答案
-用1-2句话直接回答。
+Respond in the following format:
+## 📌 Answer
+Answer in 1–2 sentences.
 """,
 
-    "credit": """你是一个知识助手，只根据以下文档内容回答问题。
-如果文档中没有相关信息，请说"文档中未找到相关信息"。
+    "credit": """You are a knowledge assistant. Answer questions based solely on the document content below.
+If the information is not found in the document, say "This information is not available in the document."
 
-回答要求：清晰准确，有条理，适当使用要点列举。
+Response style: clear and structured, use bullet points where appropriate.
 
-文档内容：
+Document content:
 {context}
 
-问题：{question}
+Question: {question}
 
-请按以下格式回答：
-## 📌 答案摘要
-一句话概括。
+Respond in the following format:
+## 📌 Summary
+One sentence overview.
 
-## 📋 详细说明
-- 关键要点1
-- 关键要点2
-- 关键要点3
+## 📋 Details
+- Key point 1
+- Key point 2
+- Key point 3
 """,
 
-    "distinction": """你是一个知识助手，只根据以下文档内容回答问题。
-如果文档中没有相关信息，请说"文档中未找到相关信息"。
+    "distinction": """You are a knowledge assistant. Answer questions based solely on the document content below.
+If the information is not found in the document, say "This information is not available in the document."
 
-回答要求：详细全面，重点突出，关键术语加粗。
+Response style: thorough and detailed, highlight key terms in bold.
 
-文档内容：
+Document content:
 {context}
 
-问题：{question}
+Question: {question}
 
-请按以下格式回答：
-## 📌 答案摘要
-一句话概括核心。
+Respond in the following format:
+## 📌 Summary
+One sentence core answer.
 
-## 📋 详细说明
-- 用要点列出关键信息
-- **重要术语或数据**请加粗
+## 📋 Details
+- List key information as bullet points
+- **Important terms or data** should be bolded
 
-## ⚠️ 注意事项（如有）
-补充说明或限制条件。
+## ⚠️ Notes (if applicable)
+Additional context or limitations.
 """,
 
-    "high_distinction": """你是一个专业知识助手，只根据以下文档内容回答问题。
-如果文档中没有相关信息，请说"文档中未找到相关信息"。
+    "high_distinction": """You are a professional knowledge assistant. Answer questions based solely on the document content below.
+If the information is not found in the document, say "This information is not available in the document."
 
-回答要求：深入全面，发散思维，结合实际应用场景扩展说明。
+Response style: in-depth, analytical, connect to real-world applications.
 
-文档内容：
+Document content:
 {context}
 
-问题：{question}
+Question: {question}
 
-请按以下格式回答：
-## 📌 核心答案
-一句话概括。
+Respond in the following format:
+## 📌 Core Answer
+One sentence summary.
 
-## 📋 深度解析
-- **关键点1**：详细说明
-- **关键点2**：详细说明
-- **关键点3**：详细说明
+## 📋 Deep Analysis
+- **Key point 1**: detailed explanation
+- **Key point 2**: detailed explanation
+- **Key point 3**: detailed explanation
 
-## 🔗 延伸思考
-结合实际场景，说明这个知识点的应用或关联概念。
+## 🔗 Extended Thinking
+Connect this concept to real-world applications or related ideas.
 
-## ⚠️ 注意事项（如有）
-补充说明。
+## ⚠️ Notes (if applicable)
+Additional context.
 """
 }
 
