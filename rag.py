@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
-from langchain_community.embeddings import DashScopeEmbeddings
-from langchain_community.chat_models import ChatTongyi
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyMuPDFLoader, TextLoader, Docx2txtLoader
@@ -10,7 +9,7 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 load_dotenv()
-KEY = os.getenv("DASHSCOPE_API_KEY")
+KEY = os.getenv("GOOGLE_API_KEY")
 
 SPLITTER = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=200)
 
@@ -100,7 +99,6 @@ Additional context.
 """
 }
 
-# 出题 prompt
 QUIZ_PROMPT = ChatPromptTemplate.from_template("""根据以下文档内容，出3道考题帮助理解，难度对应"{level}"等级。
 
 文档内容：
@@ -120,7 +118,6 @@ QUIZ_PROMPT = ChatPromptTemplate.from_template("""根据以下文档内容，出
 """)
 
 def load_file(path, suffix):
-    # 根据文件类型选择对应加载器
     if suffix == "pdf":
         return PyMuPDFLoader(path).load()
     elif suffix == "txt":
@@ -129,18 +126,19 @@ def load_file(path, suffix):
         return Docx2txtLoader(path).load()
 
 def build_qa(files):
-    # 加载文件 → 分块 → 向量化 → 存入Chroma
     docs = []
     for path, suffix in files:
         docs += load_file(path, suffix)
     chunks = SPLITTER.split_documents(docs)
-    db = Chroma.from_documents(chunks, DashScopeEmbeddings(dashscope_api_key=KEY))
-    llm = ChatTongyi(dashscope_api_key=KEY, model_name="qwen-plus", temperature=0.1)
+    db = Chroma.from_documents(
+        chunks,
+        GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=KEY)
+    )
+    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=KEY, temperature=0.1)
     retriever = db.as_retriever(search_kwargs={"k": 4})
     return retriever, llm
 
 def ask(retriever, llm, question, level="distinction"):
-    # 根据目标等级选择对应prompt，检索文档，生成回答
     prompt_template = LEVEL_PROMPTS.get(level, LEVEL_PROMPTS["distinction"])
     prompt = ChatPromptTemplate.from_template(prompt_template)
     chain = {"context": retriever, "question": RunnablePassthrough()} | prompt | llm | StrOutputParser()
@@ -150,7 +148,6 @@ def ask(retriever, llm, question, level="distinction"):
     return answer, sources
 
 def generate_quiz(retriever, llm, level="distinction"):
-    # 从文档中随机检索内容，生成3道例题
     docs = retriever.invoke("请介绍文档的主要内容和核心概念")
     context = "\n\n".join([d.page_content for d in docs])
     chain = QUIZ_PROMPT | llm | StrOutputParser()

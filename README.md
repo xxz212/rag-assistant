@@ -1,77 +1,73 @@
 # ✨ RAG Knowledge Assistant
 
-> An AI-powered document Q&A system built with LangChain, DashScope, and Streamlit.  
-> Upload your documents — ask anything — get grounded answers with source references.
+> An AI-powered multi-modal assistant built with LangChain, Google Gemini, and Streamlit.  
+> Upload documents, images, or data files — ask anything — get grounded answers powered by Gemini 1.5 Flash.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![LangChain](https://img.shields.io/badge/LangChain-1.2.15-green)
-![Streamlit](https://img.shields.io/badge/Streamlit-latest-red)
-![DashScope](https://img.shields.io/badge/Alibaba_DashScope-API-orange)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.56.0-red)
+![Gemini](https://img.shields.io/badge/Google_Gemini-1.5_Flash-orange)
 
 ---
 
-## 📸 Demo
+## 🌐 Live Demo
 
-<!-- 截图1：主界面 -->
+> **[▶ Try it here →](https://your-app.streamlit.app)** *(link available after deployment)*
+
+---
+
+## 📸 Screenshots
+
 ![Main Interface](assets/screenshot_main1.png)
 ![Main Interface](assets/screenshot_main2.png)
-![Main Interface](assets/screenshot_main3.png)
-![Main Interface](assets/screenshot_main4.png)
-![Main Interface](assets/screenshot_main5.png)
-
-<!-- 截图2：问答效果 -->
 ![Q&A Result](assets/screenshot_qa1.png)
-![Q&A Result](assets/screenshot_qa2.png)
-
-<!-- 截图3：出题功能 -->
 ![Quiz Feature](assets/screenshot_quiz1.png)
-![Quiz Feature](assets/screenshot_quiz2.png)
 
 ---
 
 ## 🚀 Features
 
-- **Multi-format Upload** — PDF, TXT, DOCX support with file management sidebar
-- **RAG Pipeline** — Semantic chunking → DashScope Embeddings → Chroma Vector DB → MMR Retrieval
-- **Grounded Answers** — Strictly answers from uploaded documents, no hallucination
-- **Source Attribution** — Every answer cites the exact source file
-- **Score Goal Mode** — Adjusts answer depth based on target grade (Pass / Credit / Distinction / HD)
+- **Document Q&A** — Upload PDF, TXT, DOCX and ask questions grounded in your content, with source attribution
+- **RAG Pipeline** — Semantic chunking → Google Embeddings → Chroma Vector DB → Retrieval → Gemini generation
+- **Score Goal Mode** — Adjusts answer depth by target grade: Pass / Credit / Distinction / High Distinction
 - **Quiz Generator** — Auto-generates 3 practice questions from document content
-- **Multi-Session** — Independent conversation sessions with custom names, pin, color labels
-- **Image Analysis** — Visual Q&A powered by Qwen-VL-Plus (product, contract, competitor analysis)
-- **Data Analysis** — CSV/Excel natural language queries + chart generation
+- **Image Analysis** — Multi-modal visual Q&A via Gemini 1.5 Flash (e-commerce, contract, competitor, interior, medical modes)
+- **Data Analysis** — Natural language queries on CSV/Excel + AI-generated downloadable charts
+- **Multi-Session** — Independent sessions with custom names, pin to top, and color labels
 
 ---
 
 ## 🏗️ Architecture
+
+```
 ┌─────────────────────────────────────────┐
 │           Streamlit Frontend            │
 │  Multi-Session │ Chat UI │ Quiz Panel   │
 └──────────────────┬──────────────────────┘
-│
+                   │
 ┌──────────────────▼──────────────────────┐
 │              RAG Pipeline               │
 │  Load → Chunk → Embed → Store → Retrieve│
 └──────┬─────────────────┬────────────────┘
-│                 │
-┌──────▼──────┐  ┌───────▼────────┐
-│   Chroma    │  │  DashScope API │
-│ Vector DB   │  │  qwen-plus     │
-│  (local)    │  │  qwen-vl-plus  │
-└─────────────┘  │  text-embed-v3 │
-└────────────────┘
+       │                 │
+┌──────▼──────┐  ┌───────▼────────────────┐
+│   Chroma    │  │   Google Gemini API    │
+│ Vector DB   │  │  gemini-1.5-flash (LLM)│
+│  (local)    │  │  embedding-001 (embed) │
+└─────────────┘  └────────────────────────┘
+```
 
 ---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Frontend | Streamlit |
-| LLM | Alibaba Cloud DashScope (qwen-plus) |
-| Vision Model | Alibaba Cloud DashScope (qwen-vl-plus) |
-| Embedding | DashScope text-embedding-v3 |
-| Vector DB | Chroma (local persistent) |
+|---|---|
+| Frontend | Streamlit 1.56.0 |
+| LLM | Google Gemini 1.5 Flash |
+| Vision | Google Gemini 1.5 Flash (multi-modal) |
+| Embedding | Google text-embedding-001 |
+| Vector DB | Chroma (local) |
 | RAG Framework | LangChain + langchain-chroma |
 | Document Loaders | PyMuPDF · Docx2txt · TextLoader |
 | Data Analysis | Pandas · Matplotlib |
@@ -86,18 +82,20 @@
 git clone https://github.com/xxz212/rag-assistant.git
 cd rag-assistant
 python -m venv .venv
-.venv\Scripts\activate       # Windows
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Mac/Linux
 pip install -r requirements.txt
 ```
 
-### 2. Configure
+### 2. Configure API Key
 
 ```bash
 cp .env.example .env
-# Add your DashScope API Key
+# Open .env and fill in your Google Gemini API key
 ```
 
-Get your key at: https://dashscope.console.aliyun.com/
+Get your free key at: https://aistudio.google.com  
+*(No credit card required)*
 
 ### 3. Run
 
@@ -108,43 +106,50 @@ streamlit run app.py
 ---
 
 ## 📁 Project Structure
+
+```
 rag-assistant/
 ├── app.py              # Streamlit UI + session management
 ├── rag.py              # RAG pipeline (load/chunk/embed/retrieve/answer)
-├── vision.py           # Image analysis (qwen-vl-plus)
+├── vision.py           # Image analysis (Gemini vision)
 ├── data_analysis.py    # CSV/Excel analysis + chart generation
 ├── session.py          # Session state management
-├── requirements.txt
-└── .env.example
+├── requirements.txt    # Pinned dependencies
+├── .env.example        # Environment variable template
+└── assets/             # Screenshots
+```
+
 ---
 
 ## 💡 Key Design Decisions
 
-**Why MMR Retrieval?**  
-Maximal Marginal Relevance avoids returning duplicate chunks — improves answer coverage and diversity.
+**Why Google Gemini 1.5 Flash?**  
+Free tier with generous quota — suitable for portfolio demos without billing. Multi-modal support (text + vision) in a single model eliminates the need for separate vision APIs.
 
-**Why DashScope instead of OpenAI?**  
-Stable access for China-based clients without VPN. text-embedding-v3 outperforms ada-002 on Chinese text.
+**Why RAG instead of fine-tuning?**  
+RAG keeps answers grounded in uploaded documents, preventing hallucination. No training cost, instantly updates when new documents are uploaded.
 
 **Why session-based architecture?**  
-Each conversation maintains independent vector stores and history — enables multi-user scenarios without data leakage.
+Each conversation maintains independent vector stores and history — enables multi-document workflows without cross-session data leakage.
 
 ---
 
 ## 🗺️ Roadmap
 
-- [ ] Streaming output (token-by-token response)
+- [x] Multi-format document Q&A (PDF / TXT / DOCX)
+- [x] Image analysis with 5 domain modes
+- [x] Data analysis + chart generation
+- [x] Score-based answer depth adjustment
+- [x] Streamlit Cloud deployment
+- [ ] Streaming output (token-by-token)
 - [ ] Persistent vector store (survive page refresh)
-- [ ] Deployment on Streamlit Cloud
-- [ ] Resume generator feature
 - [ ] REST API (FastAPI backend)
 
 ---
 
 ## 👨‍💻 Author
 
-Built by **Nate** — Master of IT student @ University of Wollongong  
-Focused on AI application engineering and LLM-powered product development.
+Built by **Nate** — Master of IT @ University of Wollongong  
+Targeting AI Application Engineer roles in Melbourne / Sydney.
 
 [![GitHub](https://img.shields.io/badge/GitHub-xxz212-black)](https://github.com/xxz212)
-

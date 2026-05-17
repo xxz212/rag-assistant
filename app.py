@@ -12,12 +12,12 @@ st.set_page_config(page_title="RAG Knowledge Assistant", layout="wide")
 st.markdown("""
 <style>
 .stApp {
-    background: radial-gradient(ellipse at 20% 50%, #1a0533 0%, #0a0a0f 50%, #001a33 100%);
+    background: radial-gradient(ellipse at 20% 50%, #1a0533 0%, #12082a 50%, #001a33 100%);
     min-height: 100vh;
 }
 [data-testid="stSidebar"] {
     background: rgba(20, 5, 40, 0.9) !important;
-    border-right: 1px solid rgba(150, 80, 255, 0.3);
+    border-right: 1px solid rgba(150, 80, 255, 0.3) !important;
 }
 [data-testid="stSidebar"] h1 { color: #c084fc !important; }
 h1 { color: #e9d5ff !important; }
@@ -53,6 +53,14 @@ p, li, span, label { color: #e2d9f3 !important; }
 [data-testid="stFileUploaderDropzone"] button span,
 [data-testid="stFileUploaderDropzone"] button p { color: #8B4513 !important; }
 [data-testid="stToolbar"] * { color: #1a1a2e !important; }
+[data-testid="stExpandSidebarButton"] {
+    background: rgba(124, 58, 237, 0.6) !important;
+    border-radius: 8px !important;
+}
+[data-testid="stExpandSidebarButton"],
+[data-testid="stExpandSidebarButton"] * {
+    color: #ffffff !important;
+}
 [data-testid="stMarkdownContainer"] p { color: #ffffff !important; }
 header[data-testid="stHeader"] { background: rgba(10, 5, 20, 0.95) !important; }
 .stAlert {
@@ -83,14 +91,18 @@ header[data-testid="stHeader"] { background: rgba(10, 5, 20, 0.95) !important; }
 }
 </style>
 """, unsafe_allow_html=True)
-
+# ── 初始化首页状态 ─────────────────────────────────────────────────────────────
+if "show_landing" not in st.session_state:
+    st.session_state.show_landing = True
+if "landing_card" not in st.session_state:
+    st.session_state.landing_card = 0
 # ── 初始化全局 session 列表 ────────────────────────────────────────────────────
 if "sessions" not in st.session_state:
     st.session_state.sessions = []
 if "active_id" not in st.session_state:
     st.session_state.active_id = None
 if "pending_type" not in st.session_state:
-    st.session_state.pending_type = None  # 记录待创建的session类型
+    st.session_state.pending_type = None
 
 LEVEL_LABELS = {
     "passed": "📗 Pass",
@@ -100,134 +112,297 @@ LEVEL_LABELS = {
 }
 
 def get_active():
-    """获取当前激活的session"""
     for s in st.session_state.sessions:
         if s["id"] == st.session_state.active_id:
             return s
     return None
 
-# ── 侧边栏 ─────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.title("💬 Conversation List")
+# ── 侧边栏（只在非首页时渲染，避免 CSS display hack 导致折叠状态异常）─────────
+if not st.session_state.show_landing:
+    with st.sidebar:
+        st.title("💬 Conversation List")
 
-    # 新建对话按钮
-    st.markdown("**Create a new conversation：**")
-    # 点击按钮只记录类型，不立刻创建
-    # 技术：把待创建类型存进session_state，触发主界面显示输入框
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("📄 doc.", use_container_width=True):
-          st.session_state.pending_type = TYPE_DOC
-          st.rerun()
-    with col2:
-        if st.button("🖼️ image", use_container_width=True):
-          st.session_state.pending_type = TYPE_IMG
-          st.rerun()
-    with col3:
-        if st.button("📊 data", use_container_width=True):
-          st.session_state.pending_type = TYPE_DATA
-          st.rerun()
+        # 新建对话按钮
+        st.markdown("**Create a new conversation：**")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("📄 doc.", use_container_width=True):
+              st.session_state.pending_type = TYPE_DOC
+              st.rerun()
+        with col2:
+            if st.button("🖼️ image", use_container_width=True):
+              st.session_state.pending_type = TYPE_IMG
+              st.rerun()
+        with col3:
+            if st.button("📊 data", use_container_width=True):
+              st.session_state.pending_type = TYPE_DATA
+              st.rerun()
 
-    st.markdown("---")
+        st.markdown("---")
 
-    # 颜色标记对照表
-    COLOR_MAP = {
-      "default": "",
-      "red": "🔴",
-      "yellow": "🟡",
-      "green": "🟢",
-      "blue": "🔵",
-    }
+        # 颜色标记对照表
+        COLOR_MAP = {
+          "default": "",
+          "red": "🔴",
+          "yellow": "🟡",
+          "green": "🟢",
+          "blue": "🔵",
+        }
 
-    # 置顶的排前面，其余按创建顺序倒序
-    # 技术：sorted()按pinned字段排序，pinned=True排最前
-    sorted_sessions = sorted(
-      st.session_state.sessions,
-      key=lambda x: (not x.get("pinned", False),
-                   st.session_state.sessions.index(x) * -1)
-    )
+        # 置顶的排前面，其余按创建顺序倒序
+        sorted_sessions = sorted(
+          st.session_state.sessions,
+          key=lambda x: (not x.get("pinned", False),
+                       st.session_state.sessions.index(x) * -1)
+        )
 
-    # 初始化重命名状态
-    if "renaming_id" not in st.session_state:
-        st.session_state.renaming_id = None
+        # 初始化重命名状态
+        if "renaming_id" not in st.session_state:
+            st.session_state.renaming_id = None
 
-    for s in sorted_sessions:
-        is_active = s["id"] == st.session_state.active_id
-        color_icon = COLOR_MAP.get(s.get("color", "default"), "")
-        pin_icon = "📌 " if s.get("pinned") else ""
-        label = f"{'▶ ' if is_active else ''}{pin_icon}{color_icon} {s['name']}"
+        for s in sorted_sessions:
+            is_active = s["id"] == st.session_state.active_id
+            color_icon = COLOR_MAP.get(s.get("color", "default"), "")
+            pin_icon = "📌 " if s.get("pinned") else ""
+            label = f"{'▶ ' if is_active else ''}{pin_icon}{color_icon} {s['name']}"
 
-        # 每个对话框：左边是名字按钮，右边是三点菜单
-        col_name, col_menu = st.columns([5, 1])
+            col_name, col_menu = st.columns([5, 1])
 
-        with col_name:
-            if st.button(label, use_container_width=True, key=f"btn_{s['id']}"):
-               st.session_state.active_id = s["id"]
-               st.session_state.renaming_id = None
-               st.rerun()
-        
-        with col_menu:
-          # 技术：st.popover 点击弹出操作面板
-          with st.popover("⋯", use_container_width=True):
+            with col_name:
+                if st.button(label, use_container_width=True, key=f"btn_{s['id']}"):
+                   st.session_state.active_id = s["id"]
+                   st.session_state.renaming_id = None
+                   st.rerun()
 
-              # 重命名
-              new_name = st.text_input(
-                  "Rename",
-                  value=s["name"],
-                  key=f"rename_{s['id']}"
-              )
-              if st.button("✅ Confirm Rename", key=f"confirm_rename_{s['id']}", use_container_width=True):
-                 s["name"] = new_name.strip() or s["name"]
-                 st.rerun()
+            with col_menu:
+              with st.popover("⋯", use_container_width=True):
 
-              st.divider()
+                  # 重命名
+                  new_name = st.text_input(
+                      "Rename",
+                      value=s["name"],
+                      key=f"rename_{s['id']}"
+                  )
+                  if st.button("✅ Confirm Rename", key=f"confirm_rename_{s['id']}", use_container_width=True):
+                     s["name"] = new_name.strip() or s["name"]
+                     st.rerun()
 
-              # 置顶/取消置顶
-              pin_label = "📌 Unpin" if s.get("pinned") else "📌 Pin to Top"
-              if st.button(pin_label, key=f"pin_{s['id']}", use_container_width=True):
-                 s["pinned"] = not s.get("pinned", False)
-                 st.rerun()
+                  st.divider()
 
-              st.divider()
+                  # 置顶/取消置顶
+                  pin_label = "📌 Unpin" if s.get("pinned") else "📌 Pin to Top"
+                  if st.button(pin_label, key=f"pin_{s['id']}", use_container_width=True):
+                     s["pinned"] = not s.get("pinned", False)
+                     st.rerun()
 
-              # 颜色标记
-              st.markdown("🎨 <span style='color:#1a1a2e !important; font-weight:600'>Color Label</span>", unsafe_allow_html=True)
-              color_cols = st.columns(5)
-              for col, (color_key, color_emoji) in zip(
-                  color_cols,
-                  [("default","⬜"),("red","🔴"),("yellow","🟡"),("green","🟢"),("blue","🔵")]
-              ):
-                  with col:
-                      if st.button(color_emoji, key=f"color_{s['id']}_{color_key}"):
-                         s["color"] = color_key
-                         st.rerun()
+                  st.divider()
 
-              st.divider()
+                  # 颜色标记
+                  st.markdown("🎨 <span style='color:#1a1a2e !important; font-weight:600'>Color Label</span>", unsafe_allow_html=True)
+                  color_cols = st.columns(5)
+                  for col, (color_key, color_emoji) in zip(
+                      color_cols,
+                      [("default","⬜"),("red","🔴"),("yellow","🟡"),("green","🟢"),("blue","🔵")]
+                  ):
+                      with col:
+                          if st.button(color_emoji, key=f"color_{s['id']}_{color_key}"):
+                             s["color"] = color_key
+                             st.rerun()
 
-              # 删除
-              if st.button("🗑️ Delete", key=f"del_{s['id']}", use_container_width=True):
-                  st.session_state.sessions = [
-                      x for x in st.session_state.sessions
-                      if x["id"] != s["id"]
-                  ]
-                  if st.session_state.active_id == s["id"]:
-                      st.session_state.active_id = (
-                          st.session_state.sessions[-1]["id"]
-                          if st.session_state.sessions else None
-                      )
-                  st.rerun()
+                  st.divider()
 
+                  # 删除
+                  if st.button("🗑️ Delete", key=f"del_{s['id']}", use_container_width=True):
+                      st.session_state.sessions = [
+                          x for x in st.session_state.sessions
+                          if x["id"] != s["id"]
+                      ]
+                      if st.session_state.active_id == s["id"]:
+                          st.session_state.active_id = (
+                              st.session_state.sessions[-1]["id"]
+                              if st.session_state.sessions else None
+                          )
+                      st.rerun()
 
-    
+        # 返回首页
+        st.markdown("---")
+        if st.button("🏠 Home", use_container_width=True):
+            st.session_state.show_landing = True
+            st.rerun()
+
 
 # ── 主区域 ─────────────────────────────────────────────────────────────────────
-st.title("✨ RAG Knowledge Assistant")
 st.markdown("---")
+
+# ── 首页轮播 ───────────────────────────────────────────────────────────────────
+if st.session_state.show_landing:
+
+    # 首页额外CSS：毛玻璃卡片 + 女性化渐变
+    st.markdown("""
+    <style>
+    /* 收起状态下的箭头按钮 */
+    [data-testid="collapsedControl"] svg {
+       fill: #c084fc !important;
+       color: #c084fc !important;
+    }
+    button[kind="header"] {
+       color: #c084fc !important;
+    }
+
+    .landing-title {
+        text-align: center;
+        font-size: 2.8rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #f9a8d4, #c084fc, #818cf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.2rem;
+    }
+    .landing-subtitle {
+        text-align: center;
+        color: #c4b5fd;
+        font-size: 1rem;
+        margin-bottom: 2.5rem;
+        letter-spacing: 0.05em;
+    }
+    .card-container {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(244, 168, 212, 0.25);
+        border-radius: 24px;
+        padding: 2.5rem 2rem;
+        text-align: center;
+        backdrop-filter: blur(12px);
+        transition: all 0.3s ease;
+        min-height: 380px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .card-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #f9a8d4;
+        margin-bottom: 0.8rem;
+    }
+    .card-desc {
+        color: #c4b5fd;
+        font-size: 0.9rem;
+        line-height: 1.7;
+        margin-bottom: 1.5rem;
+    }
+    .card-tags {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+    }
+    .tag {
+        background: rgba(244, 168, 212, 0.15);
+        border: 1px solid rgba(244, 168, 212, 0.3);
+        color: #f9a8d4;
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    .dot-container {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 1.5rem;
+    }
+    .dot { font-size: 0.6rem; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # 标题
+    st.markdown('<div class="landing-title">✨ RAG Knowledge Assistant</div>', unsafe_allow_html=True)
+    st.markdown('<div class="landing-subtitle">Your intelligent document companion — powered by AI</div>', unsafe_allow_html=True)
+
+    # 卡片数据
+    cards = [
+        {
+            "icon": "📄",
+            "title": "Document Q&A",
+            "desc": "Upload your PDF, TXT or DOCX files and ask anything.\nGet grounded answers with source references — no hallucination.",
+            "tags": ["PDF", "TXT", "DOCX", "RAG", "Source Citation"],
+            "type": TYPE_DOC,
+            "gradient": "linear-gradient(135deg, rgba(192,132,252,0.15), rgba(244,168,212,0.08))"
+        },
+        {
+            "icon": "🖼️",
+            "title": "Image Analysis",
+            "desc": "Upload product photos, contracts, or competitor screenshots.\nAI describes, analyzes, and answers your questions visually.",
+            "tags": ["Product", "Contract", "Competitor", "Visual Q&A"],
+            "type": TYPE_IMG,
+            "gradient": "linear-gradient(135deg, rgba(244,168,212,0.15), rgba(251,207,232,0.08))"
+        },
+        {
+            "icon": "📊",
+            "title": "Data Analysis",
+            "desc": "Upload CSV or Excel files.\nAsk data questions in plain language and generate downloadable charts.",
+            "tags": ["CSV", "Excel", "Charts", "Statistics"],
+            "type": TYPE_DATA,
+            "gradient": "linear-gradient(135deg, rgba(129,140,248,0.15), rgba(192,132,252,0.08))"
+        },
+    ]
+
+    current = st.session_state.landing_card
+
+    # 左右切换 + 卡片显示
+    col_left, col_card, col_right = st.columns([1, 6, 1])
+
+    with col_left:
+        st.markdown("<div style='height:160px'></div>", unsafe_allow_html=True)
+        if st.button("‹", use_container_width=True, key="prev_card"):
+            st.session_state.landing_card = (current - 1) % len(cards)
+            st.rerun()
+
+    with col_card:
+        card = cards[current]
+        tags_html = "".join([f'<span class="tag">{t}</span>' for t in card["tags"]])
+        st.markdown(f"""
+        <div class="card-container" style="background:{card['gradient']}">
+            <div class="card-icon">{card['icon']}</div>
+            <div class="card-title">{card['title']}</div>
+            <div class="card-desc">{card['desc']}</div>
+            <div class="card-tags">{tags_html}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 指示点
+        dots = "".join([
+            f'<span class="dot">{"🌸" if i == current else "○"}</span>'
+            for i in range(len(cards))
+        ])
+        st.markdown(f'<div class="dot-container">{dots}</div>', unsafe_allow_html=True)
+
+        # 进入按钮
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        if st.button(f"Enter {card['title']} →", use_container_width=True, key="enter_card"):
+            s = create_session(card['title'], card['type'])
+            st.session_state.sessions.append(s)
+            st.session_state.active_id = s["id"]
+            st.session_state.show_landing = False
+            st.rerun()
+
+    with col_right:
+        st.markdown("<div style='height:160px'></div>", unsafe_allow_html=True)
+        if st.button("›", use_container_width=True, key="next_card"):
+            st.session_state.landing_card = (current + 1) % len(cards)
+            st.rerun()
+
+    # 底部返回提示
+    st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;color:#6b7280;font-size:0.8rem'>← › 切换功能 · 点击 Enter 开始使用</div>", unsafe_allow_html=True)
+
+    st.stop()  # 首页显示完就停止，不渲染后面的内容
 
 session = get_active()
 
 # ── 自定义命名弹窗 ─────────────────────────────────────────────────────────
-# 技术：检测pending_type，显示输入框让用户命名，确认后才真正创建session
 if st.session_state.pending_type:
     type_names = {TYPE_DOC: "Document Chat", TYPE_IMG: "Image Analysis", TYPE_DATA: "Data Analysis"}
     type_icons = {TYPE_DOC: "📄", TYPE_IMG: "🖼️", TYPE_DATA: "📊"}
@@ -276,13 +451,17 @@ elif session["type"] == TYPE_DOC:
                     tmp.write(f.read())
                     tmp.close()
                     files.append((tmp.name, suffix, f.name))
-                retriever, llm = build_qa([(p, s) for p, s, _ in files])
-                session["retriever"] = retriever
-                session["llm"] = llm
-                session["name_map"] = {p: name for p, _, name in files}
-                session["files"] = [name for _, _, name in files]
-                session["show_level_select"] = True
-                session["name"] = files[0][2]  # 用文件名作为对话标题
+                try:
+                    retriever, llm = build_qa([(p, s) for p, s, _ in files])
+                    session["retriever"] = retriever
+                    session["llm"] = llm
+                    session["name_map"] = {p: name for p, _, name in files}
+                    session["files"] = [name for _, _, name in files]
+                    session["show_level_select"] = True
+                    session["name"] = files[0][2]
+                except Exception as e:
+                    st.error(f"⚠️ File processing failed: {e}")
+                    st.stop()
             st.rerun()
 
     # 选择目标等级
@@ -301,32 +480,31 @@ elif session["type"] == TYPE_DOC:
 
     # 问答区
     else:
-        # 技术：用st.columns把页面分左右两栏
-        # 左栏(70%)：正常聊天  右栏(30%)：出题专区
         chat_col, quiz_col = st.columns([7, 3])
 
         # ── 左栏：聊天区 ──────────────────────────────────────────────────────────
         with chat_col:
            st.caption(f"📄 {' | '.join(session['files'])}  |  Target: {LEVEL_LABELS.get(session['level'], '')}")
 
-           # 对话历史（只显示普通问答，不显示出题）
            for item in session["history"]:
               if item.get("is_quiz"):
-                 continue  # 出题内容跳过，不在聊天区显示
+                 continue
               with st.chat_message(item["role"]):
                  st.markdown(item["content"])
                  if item.get("sources"):
                     st.caption("📄 Sources: " + ", ".join(item["sources"]))
 
-           # 输入框
            question = st.chat_input("Ask your question...", key=f"input_{session['id']}")
            if question:
-              with st.spinner("Thinking..."):
-                answer, sources = ask(session["retriever"], session["llm"], question, session["level"])
-              name_map = session.get("name_map", {})
-              display_sources = list({name_map.get(s, os.path.basename(s)) for s in sources})
-              add_message(session, "user", question)
-              add_message(session, "assistant", answer, display_sources)
+              try:
+                  with st.spinner("Thinking..."):
+                      answer, sources = ask(session["retriever"], session["llm"], question, session["level"])
+                  name_map = session.get("name_map", {})
+                  display_sources = list({name_map.get(s, os.path.basename(s)) for s in sources})
+                  add_message(session, "user", question)
+                  add_message(session, "assistant", answer, display_sources)
+              except Exception as e:
+                  st.error(f"⚠️ Failed to get answer: {e}")
               st.rerun()
 
         # ── 右栏：出题专区 ────────────────────────────────────────────────────────
@@ -334,18 +512,19 @@ elif session["type"] == TYPE_DOC:
             st.markdown("### 🎯 Practice Questions")
 
             if st.button("Generate 3 Practice Questions", use_container_width=True, key=f"quiz_{session['id']}"):
-                with st.spinner("Generating questions..."):
-                  quiz = generate_quiz(session["retriever"], session["llm"], session["level"])
-                # 存进session，标记is_quiz=True
-                session["history"].append({
-                    "role": "assistant",
-                    "content": quiz,
-                    "sources": [],
-                    "is_quiz": True
-                })
+                try:
+                    with st.spinner("Generating questions..."):
+                        quiz = generate_quiz(session["retriever"], session["llm"], session["level"])
+                    session["history"].append({
+                        "role": "assistant",
+                        "content": quiz,
+                        "sources": [],
+                        "is_quiz": True
+                    })
+                except Exception as e:
+                    st.error(f"⚠️ Quiz generation failed: {e}")
                 st.rerun()
 
-            # 显示最新一次出题结果
             import re
             quiz_items = [item for item in session["history"] if item.get("is_quiz")]
             if quiz_items:
@@ -452,9 +631,12 @@ elif session["type"] == TYPE_IMG:
 
                 # 自动分析（首次，历史为空时触发）
                 if not session["history"]:
-                    with st.spinner("Analyzing..."):
-                        result = analyze_image_by_mode(session["current_image"], session["mode"])
-                    add_message(session, "assistant", result)
+                    try:
+                        with st.spinner("Analyzing..."):
+                            result = analyze_image_by_mode(session["current_image"], session["mode"])
+                        add_message(session, "assistant", result)
+                    except Exception as e:
+                        st.error(f"⚠️ Image analysis failed: {e}")
                     st.rerun()
 
                 for item in session["history"]:
@@ -463,10 +645,13 @@ elif session["type"] == TYPE_IMG:
 
                 question = st.chat_input("Ask a follow-up question...", key=f"input_{session['id']}")
                 if question:
-                    with st.spinner("Analyzing..."):
-                        answer = analyze_image_by_mode(session["current_image"], session["mode"], followup=question)
-                    add_message(session, "user", question)
-                    add_message(session, "assistant", answer)
+                    try:
+                        with st.spinner("Analyzing..."):
+                            answer = analyze_image_by_mode(session["current_image"], session["mode"], followup=question)
+                        add_message(session, "user", question)
+                        add_message(session, "assistant", answer)
+                    except Exception as e:
+                        st.error(f"⚠️ Analysis failed: {e}")
                     st.rerun()
             else:
                 st.info("👆 Upload an image to start analysis")
@@ -501,7 +686,6 @@ elif session["type"] == TYPE_DATA:
     for item in session["history"]:
         with st.chat_message(item["role"]):
             st.markdown(item["content"])
-            # 如果有图表路径，显示下载按钮
             if item.get("chart_path") and os.path.exists(item["chart_path"]):
                 with open(item["chart_path"], "rb") as f:
                     st.download_button(
@@ -521,16 +705,22 @@ elif session["type"] == TYPE_DATA:
         if question:
             add_message(session, "user", question)
             if question.lower().startswith("generate chart:"):
-                with st.spinner("Generating chart..."):
-                    chart_path = tempfile.mktemp(suffix=".png")
-                    generate_chart(session["df"], question, chart_path)
-                msg = {"role": "assistant", "content": "Chart generated — click below to download:",
-                       "sources": [], "chart_path": chart_path}
-                session["history"].append(msg)
+                try:
+                    with st.spinner("Generating chart..."):
+                        chart_path = tempfile.mktemp(suffix=".png")
+                        generate_chart(session["df"], question, chart_path)
+                    msg = {"role": "assistant", "content": "Chart generated — click below to download:",
+                           "sources": [], "chart_path": chart_path}
+                    session["history"].append(msg)
+                except Exception as e:
+                    st.error(f"⚠️ Chart generation failed: {e}")
             else:
-                with st.spinner("analyzing..."):
-                    answer = ask_data(session["df"], question)
-                add_message(session, "assistant", answer)
+                try:
+                    with st.spinner("analyzing..."):
+                        answer = ask_data(session["df"], question)
+                    add_message(session, "assistant", answer)
+                except Exception as e:
+                    st.error(f"⚠️ Data analysis failed: {e}")
             st.rerun()
     else:
         st.info("👆 please upload data file here")
