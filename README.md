@@ -12,7 +12,7 @@
 
 ## 🌐 Live Demo
 
-> **[▶ Try it here →](https://your-app.streamlit.app)** *(link available after deployment)*
+> **[▶ Try it here →](https://rag-assistant-qfhteykrenpwycenjkaxpa.streamlit.app)**
 
 ---
 

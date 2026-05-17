@@ -210,19 +210,13 @@ GOOGLE_API_KEY="your-google-gemini-api-key-here"
 
 ### 立即要做（阻塞性）
 
-- [ ] **在 Streamlit Cloud 设置 `GOOGLE_API_KEY`**
-  - 路径：Streamlit Cloud app → Settings → Secrets
-  - 内容：`GOOGLE_API_KEY = "你的真实key"`
-  - 然后 Reboot app
-  - **不做这个，app 运行但所有 AI 功能都会报错**
-
-- [ ] **确认 Streamlit Cloud 部署成功**（第3轮修复刚推送，需要验证）
+- [x] **在 Streamlit Cloud 设置 `GOOGLE_API_KEY`** — 已完成
+- [x] **确认 Streamlit Cloud 部署成功** — 已部署，URL：`https://rag-assistant-qfhteykrenpwycenjkaxpa.streamlit.app`
 
 ### 部署成功后
 
-- [ ] **更新 README 中的 live demo 链接**
-  - 当前占位符：`https://your-app.streamlit.app`
-  - 改成真实的 Streamlit Cloud URL
+- [x] **更新 README 中的 live demo 链接**
+  - URL：`https://rag-assistant-qfhteykrenpwycenjkaxpa.streamlit.app`
 
 ### 低优先级（可选）
 
