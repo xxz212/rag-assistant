@@ -2,7 +2,7 @@
 
 > **用途 / Purpose**: 供下次对话开始时快速恢复上下文。阅读此文档可完整还原项目现状、已做的事、未完成的事。
 >
-> **Last updated**: 2026-05-17
+> **Last updated**: 2026-05-17（本次会话全部完成，剩余：单元测试 + CI，下次再做）
 
 ---
 
@@ -218,7 +218,7 @@ GOOGLE_API_KEY="your-google-gemini-api-key-here"
 - [x] **更新 README 中的 live demo 链接**
   - URL：`https://rag-assistant-qfhteykrenpwycenjkaxpa.streamlit.app`
 
-### 低优先级（可选）
+### 低优先级（可选，下次再做）
 
 - [ ] 编写基础单元测试（`tests/` 目录，pytest）
 - [ ] GitHub Actions CI（需要先有测试）
